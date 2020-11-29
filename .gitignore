@@ -1,2 +1,3 @@
-# excluce data folder
-/data/*
+/data/widerface/*
+/data/raw_*
+.DS_Store
