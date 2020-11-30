@@ -6,8 +6,7 @@ import numpy as np
 import numpy.random as np_rand
 import cv2 as cv
 import argparse
-from tqdm import tqdm
-# from modules.utils import intersection_over_union, read_annotations
+import tqdm
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('data_path', './data',
@@ -52,7 +51,7 @@ def read_annotations(path, size = -1):
     # iterate over lines
     i = 0
     # create progress bar
-    pbar = tqdm(total=len(lines))
+    pbar = tqdm.tqdm(total=len(lines))
     while i < len(lines):
         # return if enough samples have been found
         if size > 0 and len(training_data) >= size:
@@ -126,8 +125,7 @@ def generate_training_data(pixels, annotations, data_path, im_dir):
 
     idx, p_idx, n_idx, d_idx, face_idx = [0]*5
 
-    for i in tqdm(range(len(annotations))):
-        anno = annotations[i]
+    for anno in tqdm.tqdm(annotations):
 
         img_path = anno['path']
         faces = anno['faces']
