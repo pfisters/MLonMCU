@@ -46,7 +46,7 @@ def make_bound_box_example(line, pixels):
     im = cv.imread(image_file_name)
     h, w, ch = im.shape
     if h is not pixels or w is not pixels:
-        im = cv2.resize(im, (pixels, pixels))
+        im = cv.resize(im, (pixels, pixels))
     im = im.astype('uint8')
     label = np.array([
         float(words[2]), float(words[3]),
@@ -91,7 +91,7 @@ def bbx_records(files, pixels, output_dir):
         logging.info('{:s} already exists. Exit ...'.format(output_dir))
         return
 
-    logging.info('Converting %s sets of bounding boxes to tfrecords' & len(files))
+    logging.info('Converting %s sets of bounding boxes to tfrecords' % len(files))
 
     length = min([len(i) for i in files])
 

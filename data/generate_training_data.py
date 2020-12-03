@@ -137,13 +137,17 @@ def generate_training_data(pixels, annotations, data_path, im_dir):
         # generate negatives
         num_negs = 0
         while num_negs < 50:
+            
             size = np_rand.randint(40, min(width, height) / 2)
-            x = np_rand.randint(0, width - size)
-            y = np_rand.randint(0, height - size)
-            box = np.array([x, y, x + size, y + size])
+            x1 = np_rand.randint(0, width - size)
+            y1 = np_rand.randint(0, height - size)
+            x2 = x1 + size
+            y2 = y1 + size
+
+            box = np.array([x1, y1, x2, y2])
 
             if np.max(intersection_over_union(box, faces)) < 0.3:
-                cropped_im = img[y : y + size, x : x + size, :]
+                cropped_im = img[y1 : y2, x1 : x2, :]
                 resized_im = cv.resize(cropped_im, (pixels, pixels), interpolation = cv.INTER_LINEAR)
                 save_path = os.path.join(negatives, '%s.jpg' % n_idx)
                 neg_file.write(save_path + ' 0\n')
