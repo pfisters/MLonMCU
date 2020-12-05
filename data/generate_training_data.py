@@ -4,11 +4,13 @@ import os
 import sys
 import numpy as np
 import numpy.random as np_rand
-import cv2 as cv
+import cv2
 import argparse
 import tqdm
 
 FLAGS = flags.FLAGS
+flags.DEFINE_integer('min_face_size', 40,
+    'minimal size of face in image', lower_bound=0)
 flags.DEFINE_string('data_path', './data',
     'path to the data')
 flags.DEFINE_string('training_path', './data/widerface/train',
@@ -117,10 +119,13 @@ def generate_training_data(pixels, annotations, data_path, im_dir):
             os.mkdir(dir)
         
     for dir in [positives, negatives, partials]:
-        if not os.path.exists(os.path.join(dir, str(pixels) + '.txt')):
-            f = open(os.path.join(dir, str(pixels) + '.txt'), 'w')
-            files.append(f)
-
+        file_path = os.path.join(dir, str(pixels) + '.txt')
+        if os.path.exists(file_path):
+            logging.info('{:s} already exists. Exit ...'.format(file_path))
+            return 
+        f = open(file_path, 'w')
+        files.append(f)
+        
     pos_file, neg_file, part_file = files
 
     idx, p_idx, n_idx, d_idx, face_idx = [0]*5
@@ -129,7 +134,7 @@ def generate_training_data(pixels, annotations, data_path, im_dir):
 
         img_path = anno['path']
         faces = anno['faces']
-        img = cv.imread(os.path.join(im_dir, img_path))
+        img = cv2.imread(os.path.join(im_dir, img_path))
 
         idx += 1
         height, width, channels = img.shape
@@ -137,8 +142,7 @@ def generate_training_data(pixels, annotations, data_path, im_dir):
         # generate negatives
         num_negs = 0
         while num_negs < 50:
-            
-            size = np_rand.randint(40, min(width, height) / 2)
+            size = np_rand.randint(FLAGS.min_face_size, high= min(width, height)/2)
             x1 = np_rand.randint(0, width - size)
             y1 = np_rand.randint(0, height - size)
             x2 = x1 + size
@@ -148,23 +152,32 @@ def generate_training_data(pixels, annotations, data_path, im_dir):
 
             if np.max(intersection_over_union(box, faces)) < 0.3:
                 cropped_im = img[y1 : y2, x1 : x2, :]
-                resized_im = cv.resize(cropped_im, (pixels, pixels), interpolation = cv.INTER_LINEAR)
+                resized_im = cv2.resize(cropped_im, (pixels, pixels), interpolation = cv2.INTER_LINEAR)
                 save_path = os.path.join(negatives, '%s.jpg' % n_idx)
                 neg_file.write(save_path + ' 0\n')
-                cv.imwrite(save_path, resized_im)
+                cv2.imwrite(save_path, resized_im)
                 n_idx += 1
                 num_negs += 1
         
         # generate positives
         for face in faces:
             x1, y1, x2, y2 = face['bb']
+
             w = x2 - x1 + 1
             h = y2 - y1 + 1
 
-            if w <= 0 or h <= 0:
-                continue
+            # sanity input check
+            assert x1 >= 0, 'x < 0 : x : %s' % x1
+            assert y1 >= 0, 'y < 0 : y : %s' % y1
+            assert y2 > y1, 'y2 < y1' % (y2, y1)
+            assert x2 > x1, 'x2 < x1'
 
-            if max(w,h) < 40 or x1 < 0 or y1 < 0:
+            # sanity check: with and height non-negative
+            assert w >= 0, 'w <= 0'
+            assert h >= 0, 'h <= 0'
+
+            # sanity check: image at least as big as min face size
+            if max(w,h) < FLAGS.min_face_size:
                 continue
 
             for _ in range(20):
@@ -177,17 +190,28 @@ def generate_training_data(pixels, annotations, data_path, im_dir):
                 nx2 = nx1 + size
                 ny2 = ny1 + size
 
+                assert nx2 > nx1
+                assert ny2 > ny1
+                assert nx2 > x1
+                assert ny2 > y1
+
+                # make sure the box is within the picture
                 if nx2 > width or ny2 > height:
                     continue
                 box = np.array([nx1, ny1, nx2, ny2])
 
+                ''' 
+                offset is the relative difference to the edge of the picture
+                e.g. offset_x1 = 0.25 --> nx1 is 0.25 * pixels in the cropped image
+                e.g. offset_y2 = -0.1 --> ny2 os 0.1 * pixels outside the cropped image
+                '''
                 offset_x1 = (x1 - nx1) / float(size)
                 offset_y1 = (y1 - ny1) / float(size)
                 offset_x2 = (x2 - nx2) / float(size)
                 offset_y2 = (y2 - ny2) / float(size)
 
                 cropped_im = img[ny1: ny2, nx1: nx2, :]
-                resized_im = cv.resize(cropped_im, (pixels, pixels),interpolation=cv.INTER_LINEAR)
+                resized_im = cv2.resize(cropped_im, (pixels, pixels), interpolation=cv2.INTER_LINEAR)
                 
                 i_o_u = intersection_over_union(box, [face])
 
@@ -196,14 +220,14 @@ def generate_training_data(pixels, annotations, data_path, im_dir):
                     pos_file.write(save_path + 
                         ' 1 %.2f %.2f %.2f %.2f\n' % \
                         (offset_x1, offset_y1, offset_x2, offset_y2))
-                    cv.imwrite(save_path, resized_im)
+                    cv2.imwrite(save_path, resized_im)
                     p_idx += 1
                 elif i_o_u >= 0.4:
                     save_path = os.path.join(partials, '%s.jpg' % d_idx)
                     part_file.write(save_path + 
                         ' -1 %.2f %.2f %.2f %.2f\n' % \
                         (offset_x1, offset_y1, offset_x2, offset_y2))
-                    cv.imwrite(save_path, resized_im)
+                    cv2.imwrite(save_path, resized_im)
                     d_idx += 1
             face_idx += 1
 
@@ -216,10 +240,11 @@ def generate_training_data(pixels, annotations, data_path, im_dir):
 def main(args):
 
     pixels = args.pixels
+    images = args.images
 
     # parse annotations
-    train_annotations = read_annotations(FLAGS.train_annotations)
-    val_annotations = read_annotations(FLAGS.val_annotations)
+    train_annotations = read_annotations(FLAGS.train_annotations, size=images)
+    val_annotations = read_annotations(FLAGS.val_annotations, size=images)
 
     # generate training data
     generate_training_data(pixels, 
@@ -232,7 +257,10 @@ def parse_arguments(argv):
     parser.add_argument('pixels', 
         type=int, 
         help='The side lengths for a generated picture')
-    
+    parser.add_argument('--images',
+        type=int,
+        help='number of images to parse')
+
     return parser.parse_args(argv[1:])
 
 if __name__ == '__main__':        
