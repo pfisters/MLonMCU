@@ -14,9 +14,9 @@ import argparse
 import tqdm
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('epochs', 50,
+flags.DEFINE_integer('epochs', 15,
     'number of training epochs', lower_bound=0)
-flags.DEFINE_integer('batch_size', 64,
+flags.DEFINE_integer('batch_size', 16,
     'batch size for training')
 flags.DEFINE_float('learning_rate', 1e-3,
     'initial learning rate')
@@ -153,8 +153,7 @@ def main(args):
     model.summary()
 
     # save model
-    # model.save(os.path.join('models','onet.h5'))
-    model.save_weights(os.path.join('models','onet.h5'))
+    model.save(os.path.join('models','onet.h5'))
 
 if __name__ == '__main__':        
     try:

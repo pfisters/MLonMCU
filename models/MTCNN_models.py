@@ -3,7 +3,7 @@ from tensorflow.keras.models import Model
 import tensorflow.compat.v1 as tf
 import numpy as np
 
-def PNet(weights = None):
+def PNet():
     
     X = Input(shape = (12,12,3), name='PNet_Input')
     
@@ -20,13 +20,9 @@ def PNet(weights = None):
     classifier = Conv2D(1, kernel_size=(1, 1), strides=(1, 1), activation='sigmoid', name = 'FACE_CLASSIFIER')(L)
     regressor = Conv2D(4, kernel_size=(1, 1), strides=(1, 1), name = 'BB_REGRESSION')(L)
 
-    model = Model(X, [classifier, regressor], name = 'PNet')
-    if weights is not None:
-        model.load_weights(weights, by_name = True)
+    return Model(X, [classifier, regressor], name = 'PNet')
 
-    return model
-
-def RNet(weights = None):
+def RNet():
 
     X = Input(shape = (24,24,3), name='RNet_Input')
 
@@ -48,14 +44,10 @@ def RNet(weights = None):
     classifier = Dense(1, activation='sigmoid', name = 'FACE_CLASSIFIER')(L)
     regressor = Dense(4, name = 'BB_REGRESSION')(L)
 
-    model = Model(X, [classifier, regressor], name = 'RNet')
+    return Model(X, [classifier, regressor], name = 'RNet')
 
-    if weights is not None:
-        model.load_weigths(weights, by_name = True)
 
-    return model 
-
-def ONet(weights = None):
+def ONet():
     
     X = Input(shape = (48, 48, 3), name = 'ONet_input')
 
@@ -81,12 +73,8 @@ def ONet(weights = None):
     classifier = Dense(1, activation='sigmoid', name = 'FACE_CLASSIFIER')(L)
     regressor = Dense(4, name = 'BB_REGRESSION')(L)
 
-    model = Model(X, [classifier, regressor], name = 'ONet')
+    return Model(X, [classifier, regressor], name = 'ONet')
 
-    if weights is not None:
-        model.load_weights(weights, by_name = True)
-
-    return model
 
 # pnet = PNet()
 # pnet.summary()

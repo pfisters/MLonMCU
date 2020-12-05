@@ -158,8 +158,8 @@ def main(args):
     model.summary()
 
     # save model
-    # model.save(os.path.join('models','pnet.h5'))
-    model.save_weights(os.path.join('models','pnet.h5'))
+    model.save(os.path.join('models','pnet.h5'))
+    # model.save_weights(os.path.join('models','pnet.h5'))
 
 if __name__ == '__main__':        
     try:

@@ -3,4 +3,5 @@
 .DS_Store
 *.pyc
 *.vscode
+*.jpeg
 *.ipynb_checkpoints
