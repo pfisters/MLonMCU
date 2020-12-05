@@ -259,7 +259,8 @@ def parse_arguments(argv):
         help='The side lengths for a generated picture')
     parser.add_argument('--images',
         type=int,
-        help='number of images to parse')
+        help='number of images to parse',
+        default=-1)
 
     return parser.parse_args(argv[1:])
 
