@@ -1,5 +1,4 @@
 from tensorflow.keras.preprocessing.image import img_to_array, load_img
-import tensorflow.keras.backend as K
 import numpy as np
 import cv2
 import random
@@ -7,7 +6,7 @@ import math
 
 from absl import app, flags, logging
 from absl.flags import FLAGS, argparse_flags
-from models.MTCNN_models import PNet
+from models.MTCNN_models import ONet
 import tensorflow as tf
 import os
 
@@ -21,9 +20,9 @@ flags.DEFINE_integer('batch_size', 64,
     'batch size for training')
 flags.DEFINE_float('learning_rate', 1e-3,
     'initial learning rate')
-flags.DEFINE_integer('pixels', 12,
+flags.DEFINE_integer('pixels', 48,
     'input size of images', lower_bound=0)
-flags.DEFINE_integer('training_size', 3000,
+flags.DEFINE_integer('training_size', 1500,
     'size of the trianing set')
 flags.DEFINE_list('training_set_split', [1, 0, 1,], 
     'split of training set: positives, partials, negatives')
@@ -68,7 +67,7 @@ def load_data(samples, pixels):
         # load and scale image
         img = load_img(image_path, target_size=(pixels, pixels))
         # scale image to [0,1]
-        img = img_to_array(img) / 255.0
+        img = img_to_array(img) / 255
         # append to images
         data_.append(img)
         # get category
@@ -85,10 +84,6 @@ def load_data(samples, pixels):
     data = np.array(data_, dtype='float32')
     cat = np.array(cls_, dtype='float32')
     bbx = np.array(bbx_, dtype='float32')
-
-    # reshape to have the correct output shape for the pnet
-    bbx = bbx.reshape(bbx.shape[0], 1, 1, -1)
-    cat = cat.reshape(cat.shape[0], 1, 1, -1)
 
     # return
     return data, cat, bbx
@@ -123,12 +118,12 @@ def main(args):
     data, cat, bbx = load_data(samples, FLAGS.pixels)
 
     # load model
-    model = PNet()
+    model = ONet()
 
     # define losses
     losses = {
-        'FACE_CLASSIFIER' : tf.keras.losses.BinaryCrossentropy(),
-        'BB_REGRESSION' : tf.keras.losses.MeanSquaredError()
+        'FACE_CLASSIFIER' : 'binary_crossentropy',
+        'BB_REGRESSION' : 'mse'
     }
     loss_weights = {
         'FACE_CLASSIFIER' : 1.0,
@@ -139,7 +134,7 @@ def main(args):
     model.compile(
         loss = losses,
         loss_weights=loss_weights,
-        optimizer = tf.keras.optimizers.Adam(learning_rate=FLAGS.learning_rate),
+        optimizer=tf.keras.optimizers.Adam(),
         metrics=['accuracy']
     )
 
@@ -158,8 +153,8 @@ def main(args):
     model.summary()
 
     # save model
-    # model.save(os.path.join('models','pnet.h5'))
-    model.save_weights(os.path.join('models','pnet.h5'))
+    # model.save(os.path.join('models','onet.h5'))
+    model.save_weights(os.path.join('models','onet.h5'))
 
 if __name__ == '__main__':        
     try:

@@ -78,10 +78,12 @@ def read_annotations(path, size = -1):
             face = {}
             features = lines[j]
             features = features.split(' ')
-            x, y, w, h = features[:4]
-            if int(w) <= 0 or int(h) <= 0: # skip bb with non-positive height or width
+            bbx = features[:4]
+            # convert to integers
+            bbx = [int(i) for i in bbx]
+            if bbx[2] <= 0 or bbx[3] <= 0: # skip bb with non-positive height or width
                 continue
-            face['bb'] = [int(x), int(y), int(x) + int(w), int(y) + int(h)]
+            face['bb'] = [bbx[0], bbx[1], bbx[0] + bbx[2], bbx[1] + bbx[3]]
             face['blur'] = int(features[4])
             face['expression'] = int(features[5])
             face['illumination'] = int(features[6])
