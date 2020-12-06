@@ -8,9 +8,10 @@ import math
 from absl import app, flags, logging
 from absl.flags import FLAGS, argparse_flags
 from models.MTCNN_models import PNet, RNet, ONet
-from tools.data_handling import preprocess_image, resizing_scales
+from tools.data_handling import preprocess_image, resizing_scales, create_scaled_batch
 import tensorflow as tf
 import os
+import tqdm
 
 import argparse
 
@@ -21,6 +22,10 @@ flags.DEFINE_string('rnet_weights', './models/rnet.h5',
     'path to the weights of the RNet')
 flags.DEFINE_string('onet_weights', './models/onet.h5',
     'path to the weights of the ONet')
+flags.DEFINE_float('scale_factor', 0.709,
+    'scale factor for image scaling')
+flags.DEFINE_integer('min_face_size', 40,
+    'minimal face size')
 
 
 def main(args):
@@ -39,20 +44,23 @@ def main(args):
     image = preprocess_image(image_path)
     
     # compute resizing scales
-    (orig_h, orig_w, ch) = image.shape
+    (orig_h, orig_w, _) = image.shape
     scales = resizing_scales(image.shape)
-    
+
     # run through pnet
     pnet_out = []
-    for scale in scales:
+    for scale in tqdm.tqdm(scales):
         new_h = int(orig_h * scale)
         new_w = int(orig_w * scale)
         scaled_img = preprocess_image(image_path, (new_h, new_w))
-        scaled_img = scaled_img.reshape(1,*scaled_img.shape)
-        out = pnet.predict(scaled_img)
+        scaled_imgs = create_scaled_batch(scaled_img, (12,12), (5,5))
+        out = pnet.predict(scaled_imgs)
         pnet_out.append(out)
+    
+    # extract rectangles from faces
+    
 
-    print(pnet_out[0])
+
 
 def parse_arguments(argv):
     parser = argparse_flags.ArgumentParser()

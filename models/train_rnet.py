@@ -22,7 +22,7 @@ flags.DEFINE_float('learning_rate', 1e-3,
     'initial learning rate')
 flags.DEFINE_integer('pixels', 24,
     'input size of images', lower_bound=0)
-flags.DEFINE_integer('training_size', 1500,
+flags.DEFINE_integer('training_size', 10000,
     'size of the trianing set')
 flags.DEFINE_list('training_set_split', [1, 0, 1,], 
     'split of training set: positives, partials, negatives')

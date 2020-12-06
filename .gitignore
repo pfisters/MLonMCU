@@ -1,5 +1,6 @@
 /data/widerface/*
 /data/raw_*
+/data/val_*
 .DS_Store
 *.pyc
 *.vscode

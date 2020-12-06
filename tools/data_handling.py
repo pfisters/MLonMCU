@@ -2,6 +2,7 @@ from absl import app, flags, logging
 from tensorflow.keras.preprocessing.image import img_to_array, load_img
 import numpy as np
 
+FLAGS = flags.FLAGS
 
 def preprocess_image(image_path, size = None):
     if size is not None:
@@ -32,15 +33,28 @@ def resizing_scales(shape):
 
     # multi scale
     scales = []
-    factor = 0.709
     factor_count = 0
     minl = min(h,w)
     while minl >= 12:
-        scales.append(prev_scale * pow(factor, factor_count))
-        minl *= factor
+        scales.append(prev_scale * pow(FLAGS.scale_factor, factor_count))
+        minl *= FLAGS.scale_factor
         factor_count += 1
     
     return scales
+
+
+def create_scaled_batch(image, target_shape, stride):
+    (ih, iw, _) = image.shape
+    (h, w) = target_shape
+    (sx, sy) = stride
+    images = np.empty((1,h,w,3), dtype='float32')
+    for y in range(h, ih, sy):
+        for x in range(w, iw, sx):
+            new_img = image[y-h:y, x-w:x, :]
+            new_img = new_img.reshape(1, *new_img.shape)
+            images = np.append(images, new_img, axis=0)
+    
+    return images
 
 
 

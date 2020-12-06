@@ -25,9 +25,10 @@ flags.DEFINE_string('val_annotations',
     'path to validation annotations')
 
 def intersection_over_union(box, faces):
-    
     bbs = np.array([face['bb'] for face in faces], dtype = np.float32)
     box_area = (box[2] - box[0] + 1) * (box[3] - box[1] + 1)
+    if bbs.size == 0:
+        return None
     area = (bbs[:, 2] - bbs[:, 0] + 1) * (bbs[:, 3] - bbs[:, 1] + 1)
     xx1 = np.maximum(box[0], bbs[:, 0])
     yy1 = np.maximum(box[1], bbs[:, 1])
@@ -102,14 +103,14 @@ def read_annotations(path, size = -1):
     pbar.close()
     return training_data
 
-def generate_training_data(pixels, annotations, data_path, im_dir):
+def generate_data(pixels, annotations, data_path, im_dir, path_id):
     '''
     pixels = 12
     annotations = train_annotations
     im_dir = '.data/widerace/train/images/'
     '''
 
-    directory = os.path.join(data_path, 'raw_' + str(pixels))
+    directory = os.path.join(data_path, path_id + str(pixels))
     positives = os.path.join(directory, 'pos')
     negatives = os.path.join(directory, 'neg')
     partials = os.path.join(directory, 'part')
@@ -143,16 +144,31 @@ def generate_training_data(pixels, annotations, data_path, im_dir):
 
         # generate negatives
         num_negs = 0
-        while num_negs < 50:
+        errors = 0
+        while num_negs < 50 and errors < 50:
             size = np_rand.randint(FLAGS.min_face_size, high= min(width, height)/2)
             x1 = np_rand.randint(0, width - size)
             y1 = np_rand.randint(0, height - size)
             x2 = x1 + size
             y2 = y1 + size
 
+            if x1 is None or x2 is None or y1 is None or y2 is None:
+                erros += 1
+                continue
+
             box = np.array([x1, y1, x2, y2])
 
-            if np.max(intersection_over_union(box, faces)) < 0.3:
+            if box.size is 0:
+                errors += 1
+                continue
+            
+            iou = np.max(intersection_over_union(box, faces))
+
+            if iou is None:
+                errors += 1
+                continue
+
+            if iou < 0.3:
                 cropped_im = img[y1 : y2, x1 : x2, :]
                 resized_im = cv2.resize(cropped_im, (pixels, pixels), interpolation = cv2.INTER_LINEAR)
                 save_path = os.path.join(negatives, '%s.jpg' % n_idx)
@@ -249,10 +265,15 @@ def main(args):
     val_annotations = read_annotations(FLAGS.val_annotations, size=images)
 
     # generate training data
-    generate_training_data(pixels, 
+    generate_data(pixels, 
         train_annotations, 
         FLAGS.data_path, 
-        os.path.join(FLAGS.training_path, 'images'))
+        os.path.join(FLAGS.training_path, 'images'), 'raw_')
+    
+    generate_data(pixels,
+        val_annotations, 
+        FLAGS.data_path,
+        os.path.join(FLAGS.validation_path, 'images'), 'val_')
 
 def parse_arguments(argv):
     parser = argparse_flags.ArgumentParser()

@@ -23,14 +23,19 @@ flags.DEFINE_float('learning_rate', 1e-3,
     'initial learning rate')
 flags.DEFINE_integer('pixels', 12,
     'input size of images', lower_bound=0)
-flags.DEFINE_integer('training_size', 3000,
+flags.DEFINE_integer('training_size', 60000,
     'size of the trianing set')
+flags.DEFINE_integer('validation_size', 20000,
+    'size of the validation set')
 flags.DEFINE_list('training_set_split', [1, 0, 1,], 
     'split of training set: positives, partials, negatives')
+flags.DEFINE_list('validation_set_split', [1, 0, 1],
+    'split of the validation set: positives, partials, negatives')
 
-def get_image_paths(pixels):
+
+def get_image_paths(pixels, identifier):
     logging.info('Get image paths')
-    image_path = os.path.join('data', 'raw_%s' % FLAGS.pixels)
+    image_path = os.path.join('data', '%s_%s' % (identifier, FLAGS.pixels))
     image_paths = []
     for i in ['pos', 'part', 'neg']:
         im_path = os.path.join(image_path, i)
@@ -96,31 +101,43 @@ def load_data(samples, pixels):
 def main(args):
 
     # get image paths
-    image_paths = get_image_paths(FLAGS.pixels)
+    training_image_paths = get_image_paths(FLAGS.pixels, 'raw')
+    validation_image_paths = get_image_paths(FLAGS.pixels, 'val')
 
     # get number of training samples
-    lengths = []
-    for path in image_paths:
+    t_lengths, v_lengths = [], []
+    for path in training_image_paths:
         (_, anno_path) = path
         anno = open(anno_path, 'r')
-        lengths.append(len(anno.readlines()))
+        t_lengths.append(len(anno.readlines()))
     
+    for path in validation_image_paths:
+        (_, anno_path) = path
+        anno = open(anno_path, 'r')
+        v_lengths.append(len(anno.readlines()))
+
     ''' 
     calculate the number of samples from the groups:
     positives, partials, negatives 
     '''
-    split = FLAGS.training_set_split
-    numbers = [math.ceil(FLAGS.training_size / sum(split) * s) for s in split]
+    t_split = FLAGS.training_set_split
+    v_split = FLAGS.validation_set_split
+    t_numbers = [math.ceil(FLAGS.training_size / sum(t_split) * s) for s in t_split]
+    v_numbers = [math.ceil(FLAGS.validation_size / sum(v_split) * s) for s in v_split]
 
     # make sure there is enought samples
-    for l, n in zip(lengths, numbers):
+    for l, n in zip(t_lengths, t_numbers):
+        if l < n: logging.fatal('There are not enough samples')
+    for l, n in zip(v_lengths, v_numbers):
         if l < n: logging.fatal('There are not enough samples')
     
     # load samples
-    samples = sample_data(numbers, image_paths)
+    t_samples = sample_data(t_numbers, training_image_paths)
+    v_samples = sample_data(v_numbers, validation_image_paths)
 
     # load data
-    data, cat, bbx = load_data(samples, FLAGS.pixels)
+    t_data, t_cat, t_bbx = load_data(t_samples, FLAGS.pixels)
+    v_data, v_cat, v_bbx = load_data(v_samples, FLAGS.pixels)
 
     # load model
     model = PNet()
@@ -132,7 +149,7 @@ def main(args):
     }
     loss_weights = {
         'FACE_CLASSIFIER' : 1.0,
-        'BB_REGRESSION' : 0.5
+        'BB_REGRESSION' : 1.0
     }
 
     # compile model
@@ -145,15 +162,27 @@ def main(args):
 
     # train
     H = model.fit(
-        x=data,
+        x=t_data,
         y={
-            'FACE_CLASSIFIER' : cat,
-            'BB_REGRESSION' : bbx
+            'FACE_CLASSIFIER' : t_cat,
+            'BB_REGRESSION' : t_bbx
             },
         batch_size=FLAGS.batch_size,
         epochs=FLAGS.epochs
     )
 
+    logging.info('History: ')
+    logging.info(H)
+
+    score = model.evaluate(
+        x=v_data,
+        y={
+            'FACE_CLASSIFIER' : v_cat,
+            'BB_REGRESSION' : v_bbx
+            },
+        batch_size=FLAGS.batch_size
+    )
+    
     # print summary
     model.summary()
 
