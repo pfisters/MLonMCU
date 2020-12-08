@@ -132,7 +132,6 @@ class MTCNN(object):
         
     @staticmethod
     def __nms(boxes, threshold, method):
-        logging.info('NMS with %s boxes' % boxes.shape[0])
         """
         Non Maximum Suppression.
         :param boxes: np array with bounding boxes.
@@ -310,7 +309,6 @@ class MTCNN(object):
 
         numboxes = total_boxes.shape[0]
         logging.info('Stage 1: %s boxes detected' % numboxes)
-        print(total_boxes.shape)
 
         if numboxes > 0:
             pick = self.__nms(total_boxes.copy(), 0.7, 'Union')
@@ -337,8 +335,6 @@ class MTCNN(object):
         '''
         Seconds stage of MTCNN
         '''
-        logging.info('Stage 2')
-
         num_boxes = total_boxes.shape[0]
         if num_boxes == 0:
             return total_boxes, stage_status
@@ -374,6 +370,8 @@ class MTCNN(object):
 
         mv = out0[:, ipass[0]]
 
+        logging.info('Stage 2: %s boxes detected' % total_boxes.shape[0])
+
         if total_boxes.shape[0] > 0:
             pick = self.__nms(total_boxes, 0.7, 'Union')
             total_boxes = total_boxes[pick, :]
@@ -386,7 +384,6 @@ class MTCNN(object):
         '''
         Third stage of MTCNN
         '''
-        logging.info('Stage 3')
 
         num_boxes = total_boxes.shape[0]
         if num_boxes == 0:
@@ -427,8 +424,7 @@ class MTCNN(object):
 
         mv = out0[:, ipass[0]]
 
-        w = total_boxes[:, 2] - total_boxes[:, 0] + 1
-        h = total_boxes[:, 3] - total_boxes[:, 1] + 1
+        logging.info('Stage 3: %s boxes detected' % total_boxes.shape[0])
 
         if total_boxes.shape[0] > 0:
             total_boxes = self.__bbreg(total_boxes.copy(), np.transpose(mv))
@@ -448,8 +444,10 @@ def main(args):
     detector = MTCNN()
 
     bounding_boxes = detector.detect_faces(img)
+    faces = [f for f in bounding_boxes if f['confidence' > 0.95]]
 
-    faces = [f for f in faces if f['confidence' > 0.95]]
+    logging.info('Found %s bounding boxes of which %s with over 95 confidences' %
+        (str(len(bounding_boxes)), str(len(faces))))
 
     for face in faces:
         bb = face['box']

@@ -5,7 +5,7 @@ import numpy as np
 
 def PNet():
     
-    X = Input(shape = (None, None, 3), name='PNet_Input')
+    X = Input(shape = (12, 12, 3), name='PNet_Input')
     
     L = Conv2D(10, kernel_size=(3, 3), strides=(1, 1), padding='valid', name='PNet_CONV1')(X)
     L = PReLU(shared_axes=[1, 2], name='PNet_PRELU1')(L)
