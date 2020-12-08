@@ -19,47 +19,6 @@ def preprocess_image(image_path, size = None):
     return np.array(img, dtype='float32')
 
 
-def resizing_scales(shape):
-    if len(shape) is not 3:
-        logging.fatal('Invalid argument')
-    (h, w, ch) = shape
-    
-    # initialize scale
-    prev_scale = 1.0
-
-    if min(w,h) > 500:
-        prev_scale = 500./min(w, h)
-    elif max(w,h) < 500:
-        prev_scale = 500./max(w, h)
-
-    w = int(w * prev_scale)
-    h = int(h * prev_scale)
-
-    # multi scale
-    scales = []
-    factor_count = 0
-    minl = min(h,w)
-    while minl >= 12:
-        scales.append(prev_scale * pow(FLAGS.scale_factor, factor_count))
-        minl *= FLAGS.scale_factor
-        factor_count += 1
-    
-    return scales
-
-
-def create_scaled_batch(image, target_shape, stride):
-    (ih, iw, _) = image.shape
-    (h, w) = target_shape
-    (sx, sy) = stride
-    images = np.empty((1,h,w,3), dtype='float32')
-    for y in range(h, ih, sy):
-        for x in range(w, iw, sx):
-            new_img = image[y-h:y, x-w:x, :]
-            new_img = new_img.reshape(1, *new_img.shape)
-            images = np.append(images, new_img, axis=0)
-    
-    return images
-
 def get_image_paths(pixels, identifier):
     logging.info('Get image paths for %s and %s pixel squares' % (identifier, pixels))
     image_path = os.path.join('data', '%s_%s' % (identifier, pixels))
@@ -99,17 +58,19 @@ def load_data(samples, pixels):
         image_path = sample.split(' ')[0]
         # load and scale image
         img = load_img(image_path, target_size=(pixels, pixels))
-        # scale image to [0,1]
-        img = img_to_array(img) / 255.0
+        # scale image to [-1,1]
+        img = img_to_array(img) / 255
         # append to images
         data_.append(img)
         # get category
-        image_cat = int(sample.split(' ')[1])
-        cls_.append(image_cat)
+        cat = sample.split(' ')[1:3]
+        cat = [int(x) for x in cat]
+        cls_.append(cat)
         # get bounding box
-        if image_cat is not 0:
-            [x1, y1, x2, y2] = sample.split(' ')[2:]
-            bbx_.append((float(x1), float(y1), float(x2), float(y2)))
+        if cat[1] is not 1:
+            bbx = sample.split(' ')[3:]
+            bbx = [float(x) for x in bbx]
+            bbx_.append((bbx[0], bbx[1], bbx[2], bbx[3]))
         else:
             bbx_.append((0.0,0.0,0.0,0.0))
     

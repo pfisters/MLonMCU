@@ -1,6 +1,7 @@
 from tensorflow.keras.preprocessing.image import img_to_array, load_img
 import tensorflow.keras.backend as K
 import numpy as np
+import json
 import cv2
 import math
 
@@ -22,9 +23,9 @@ flags.DEFINE_float('learning_rate', 1e-3,
     'initial learning rate')
 flags.DEFINE_integer('pixels', 12,
     'input size of images', lower_bound=0)
-flags.DEFINE_integer('training_size', 60000,
+flags.DEFINE_integer('training_size', 100000,
     'size of the trianing set')
-flags.DEFINE_integer('validation_size', 20000,
+flags.DEFINE_integer('validation_size', 40000,
     'size of the validation set')
 flags.DEFINE_list('training_set_split', [1, 0, 1,], 
     'split of training set: positives, partials, negatives')
@@ -73,6 +74,13 @@ def main(args):
     t_data, t_cat, t_bbx = load_data(t_samples, FLAGS.pixels)
     v_data, v_cat, v_bbx = load_data(v_samples, FLAGS.pixels)
 
+    # convert to csv
+    '''
+    np.savetxt('pnet_data.csv', v_data.reshape(10,-1), delimiter = ',')
+    np.savetxt('pnet_cat.csv', v_cat.reshape(10,-1), delimiter=',')
+    np.savetxt('pnet_bbx.csv', v_bbx.reshape(10,-1), delimiter=',')
+    '''
+
     # load model
     model = PNet()
 
@@ -83,7 +91,7 @@ def main(args):
     }
     loss_weights = {
         'FACE_CLASSIFIER' : 1.0,
-        'BB_REGRESSION' : 1.0
+        'BB_REGRESSION' : 0.5
     }
 
     # compile model

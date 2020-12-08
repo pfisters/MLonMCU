@@ -84,7 +84,7 @@ def main(args):
     }
     loss_weights = {
         'FACE_CLASSIFIER' : 1.0,
-        'BB_REGRESSION' : 1.0
+        'BB_REGRESSION' : 0.5
     }
 
     # compile model

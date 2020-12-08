@@ -172,7 +172,7 @@ def generate_data(pixels, annotations, data_path, im_dir, path_id):
                 cropped_im = img[y1 : y2, x1 : x2, :]
                 resized_im = cv2.resize(cropped_im, (pixels, pixels), interpolation = cv2.INTER_LINEAR)
                 save_path = os.path.join(negatives, '%s.jpg' % n_idx)
-                neg_file.write(save_path + ' 0\n')
+                neg_file.write(save_path + ' 0 1\n')
                 cv2.imwrite(save_path, resized_im)
                 n_idx += 1
                 num_negs += 1
@@ -236,14 +236,14 @@ def generate_data(pixels, annotations, data_path, im_dir, path_id):
                 if i_o_u >= 0.65:
                     save_path = os.path.join(positives, '%s.jpg' % p_idx)
                     pos_file.write(save_path + 
-                        ' 1 %.2f %.2f %.2f %.2f\n' % \
+                        ' 1 0 %.2f %.2f %.2f %.2f\n' % \
                         (offset_x1, offset_y1, offset_x2, offset_y2))
                     cv2.imwrite(save_path, resized_im)
                     p_idx += 1
                 elif i_o_u >= 0.4:
                     save_path = os.path.join(partials, '%s.jpg' % d_idx)
                     part_file.write(save_path + 
-                        ' -1 %.2f %.2f %.2f %.2f\n' % \
+                        ' 0 0 %.2f %.2f %.2f %.2f\n' % \
                         (offset_x1, offset_y1, offset_x2, offset_y2))
                     cv2.imwrite(save_path, resized_im)
                     d_idx += 1
