@@ -7,7 +7,7 @@ import math
 from absl import app, flags, logging
 from absl.flags import FLAGS, argparse_flags
 from models.MTCNN_models import RNet
-from tools.data_handling import load_data, sample_data, get_image_paths
+from tools.data_handling import load_data, sample_data, get_image_paths, preprocess_image
 import tensorflow as tf
 import os
 
@@ -23,9 +23,9 @@ flags.DEFINE_float('learning_rate', 1e-3,
     'initial learning rate')
 flags.DEFINE_integer('pixels', 24,
     'input size of images', lower_bound=0)
-flags.DEFINE_integer('training_size', 60000,
+flags.DEFINE_integer('training_size', 50,
     'size of the trianing set')
-flags.DEFINE_integer('validation_size', 20000,
+flags.DEFINE_integer('validation_size', 10,
     'size of the validation set')
 flags.DEFINE_list('training_set_split', [1, 0, 1,], 
     'split of training set: positives, partials, negatives')
@@ -73,6 +73,13 @@ def main(args):
     # load data
     t_data, t_cat, t_bbx = load_data(t_samples, FLAGS.pixels)
     v_data, v_cat, v_bbx = load_data(v_samples, FLAGS.pixels)
+
+    np.savetxt('rnet_data.csv', v_data.reshape(FLAGS.validation_size,-1), delimiter = ',')
+    '''
+    np.savetxt('pnet_cat.csv', v_cat.reshape(FLAGS.validation_size,-1), delimiter=',')
+    np.savetxt('pnet_bbx.csv', v_bbx.reshape(FLAGS.validation_size,-1), delimiter=',')
+    '''
+
 
     # load model
     model = RNet()
@@ -124,7 +131,7 @@ def main(args):
     model.summary()
 
     # save model
-    model.save(os.path.join('models','rnet.h5'))
+    # model.save(os.path.join('models','rnet.h5'))
     
 if __name__ == '__main__':        
     try:

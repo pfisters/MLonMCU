@@ -242,6 +242,72 @@ class MTCNN(object):
         boundingbox[:, 0:4] = np.transpose(np.vstack([b1, b2, b3, b4]))
         return boundingbox
 
+    def detect_faces_pnet(self, image):
+        height, width, _ = image.shape
+        m = 12 / self._min_face_size
+        total_boxes = np.empty((0, 9))
+        min_layer = np.amin([height, width]) * m
+
+        scales = self.__compute_scale_pyramid(m, min_layer)
+
+        for scale in scales:
+            scaled_image = self.__scale_image(image, scale)
+            img = np.expand_dims(scaled_image, 0)
+            out = self._pnet.predict(img)
+
+            out0 = out[0]
+            out1 = out[1]
+            
+            boxes, _ = self.__generate_bounding_box(
+                out1[0, :, :, 1].copy(),
+                out0[0, :, :, :].copy(),
+                scale, self._steps_threshold[0])
+
+            # inter-scale nms
+            pick = self.__nms(boxes.copy(), 0.5, 'Union')
+            if boxes.size > 0 and pick.size > 0:
+                boxes = boxes[pick, :]
+                total_boxes = np.append(total_boxes, boxes, axis= 0)
+
+        numboxes = total_boxes.shape[0]
+
+        if numboxes > 0:
+            pick = self.__nms(total_boxes.copy(), 0.7, 'Union')
+            total_boxes = total_boxes[pick, :]
+
+            regw = total_boxes[:, 2] - total_boxes[:, 0]
+            regh = total_boxes[:, 3] - total_boxes[:, 1]
+
+            qq1 = total_boxes[:, 0] + total_boxes[:, 5] * regw
+            qq2 = total_boxes[:, 1] + total_boxes[:, 6] * regh
+            qq3 = total_boxes[:, 2] + total_boxes[:, 7] * regw
+            qq4 = total_boxes[:, 3] + total_boxes[:, 8] * regh
+
+            total_boxes = np.transpose(np.vstack([qq1, qq2, qq3, qq4, total_boxes[:, 4]]))
+            total_boxes[:, 0:4] = np.fix(total_boxes[:, 0:4]).astype(np.int32)
+
+        logging.info('PNet: %s boxes detected' % len(total_boxes))
+
+        return total_boxes
+
+    def detect_faces_rnet(self, img):
+
+        height, width, _ = img.shape
+        stage_status = StageStatus(width= width, height=height)
+
+        m = 12 / self._min_face_size
+        min_layer = np.amin([height, width]) * m
+
+        scales = self.__compute_scale_pyramid(m, min_layer)
+        stages = [self.__stage1, self.__stage2]
+        
+        result = [scales, stage_status]
+        for stage in stages:
+            result = stage(img, result[0], result[1])
+        
+        return result
+
+
     def detect_faces(self, img) -> list:
         '''
         Detects bounding boxes from the specified image
@@ -254,28 +320,30 @@ class MTCNN(object):
         min_layer = np.amin([height, width]) * m
 
         scales = self.__compute_scale_pyramid(m, min_layer)
-
         stages = [self.__stage1, self.__stage2, self.__stage3]
+        
         result = [scales, stage_status]
-
         for stage in stages:
             result = stage(img, result[0], result[1])
-
         total_boxes = result
+
+        print(total_boxes.shape)
 
         bounding_boxes = []
 
-        for bounding_box in bounding_boxes:
+        for bounding_box in total_boxes:
             x = max(0, int(bounding_box[0]))
             y = max(0, int(bounding_box[1]))
             width = int(bounding_box[2] - x)
             height = int(bounding_box[3] - y)
             bounding_boxes.append({
-                'box' : [x, y, widht, height],
+                'box' : [x, y, width, height],
                 'confidence' : bounding_box[-1]
             })
 
-        return bounding_boxes
+        logging.info('%s bounding boxes found' % len(bounding_boxes))
+        
+        return bounding_boxes, total_boxes
 
     
     def __stage1(self, image, scales: list, stage_status: StageStatus):
@@ -295,7 +363,7 @@ class MTCNN(object):
 
             out0 = out[0]
             out1 = out[1]
-
+            
             boxes, _ = self.__generate_bounding_box(
                 out1[0, :, :, 1].copy(),
                 out0[0, :, :, :].copy(),
@@ -308,7 +376,6 @@ class MTCNN(object):
                 total_boxes = np.append(total_boxes, boxes, axis= 0)
 
         numboxes = total_boxes.shape[0]
-        logging.info('Stage 1: %s boxes detected' % numboxes)
 
         if numboxes > 0:
             pick = self.__nms(total_boxes.copy(), 0.7, 'Union')
@@ -328,6 +395,8 @@ class MTCNN(object):
             total_boxes[:, 0:4] = np.fix(total_boxes[:, 0:4]).astype(np.int32)
             status = StageStatus(self.__pad(total_boxes.copy(), stage_status.width, stage_status.height),
                                 width=stage_status.width, height=stage_status.height)
+
+        logging.info('Stage 1: %s boxes detected' % len(total_boxes))
 
         return total_boxes, status
     
@@ -370,13 +439,13 @@ class MTCNN(object):
 
         mv = out0[:, ipass[0]]
 
-        logging.info('Stage 2: %s boxes detected' % total_boxes.shape[0])
-
         if total_boxes.shape[0] > 0:
             pick = self.__nms(total_boxes, 0.7, 'Union')
             total_boxes = total_boxes[pick, :]
             total_boxes = self.__bbreg(total_boxes.copy(), np.transpose(mv[:, pick]))
             total_boxes = self.__rerec(total_boxes.copy())
+
+        logging.info('Stage 2: %s boxes detected' % len(total_boxes))
 
         return total_boxes, stage_status
 
@@ -424,12 +493,12 @@ class MTCNN(object):
 
         mv = out0[:, ipass[0]]
 
-        logging.info('Stage 3: %s boxes detected' % total_boxes.shape[0])
-
         if total_boxes.shape[0] > 0:
             total_boxes = self.__bbreg(total_boxes.copy(), np.transpose(mv))
             pick = self.__nms(total_boxes.copy(), 0.7, 'Min')
             total_boxes = total_boxes[pick, :]
+
+        logging.info('Stage 3: %s boxes detected' % len(total_boxes))
 
         return total_boxes
 
@@ -443,8 +512,8 @@ def main(args):
     
     detector = MTCNN()
 
-    bounding_boxes = detector.detect_faces(img)
-    faces = [f for f in bounding_boxes if f['confidence' > 0.95]]
+    bounding_boxes, _ = detector.detect_faces(img)
+    faces = [f for f in bounding_boxes if f['confidence'] > 0.9]
 
     logging.info('Found %s bounding boxes of which %s with over 95 confidences' %
         (str(len(bounding_boxes)), str(len(faces))))

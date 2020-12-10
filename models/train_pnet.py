@@ -76,9 +76,9 @@ def main(args):
 
     # convert to csv
     '''
-    np.savetxt('pnet_data.csv', v_data.reshape(10,-1), delimiter = ',')
-    np.savetxt('pnet_cat.csv', v_cat.reshape(10,-1), delimiter=',')
-    np.savetxt('pnet_bbx.csv', v_bbx.reshape(10,-1), delimiter=',')
+    np.savetxt('pnet_data.csv', v_data.reshape(FLAGS.validation_size,-1), delimiter = ',')
+    np.savetxt('pnet_cat.csv', v_cat.reshape(FLAGS.validation_size,-1), delimiter=',')
+    np.savetxt('pnet_bbx.csv', v_bbx.reshape(FLAGS.validation_size,-1), delimiter=',')
     '''
 
     # load model

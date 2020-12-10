@@ -1,6 +1,8 @@
 /data/widerface/*
 /data/raw_*
 /data/val_*
+/data/24/*
+/data/48/*
 .DS_Store
 *.pyc
 *.vscode

@@ -1,5 +1,6 @@
 from absl import app, flags, logging
 from absl.flags import FLAGS, argparse_flags
+from tools.data_handling import read_annotations, intersection_over_union
 import os
 import sys
 import numpy as np
@@ -24,91 +25,14 @@ flags.DEFINE_string('val_annotations',
     './data/widerface/val/label.txt',
     'path to validation annotations')
 
-def intersection_over_union(box, faces):
-    bbs = np.array([face['bb'] for face in faces], dtype = np.float32)
-    box_area = (box[2] - box[0] + 1) * (box[3] - box[1] + 1)
-    if bbs.size == 0:
-        return None
-    area = (bbs[:, 2] - bbs[:, 0] + 1) * (bbs[:, 3] - bbs[:, 1] + 1)
-    xx1 = np.maximum(box[0], bbs[:, 0])
-    yy1 = np.maximum(box[1], bbs[:, 1])
-    xx2 = np.minimum(box[2], bbs[:, 2])
-    yy2 = np.minimum(box[3], bbs[:, 3])
-
-    # compute the width and height of the bounding box
-    w = np.maximum(0, xx2 - xx1 + 1)
-    h = np.maximum(0, yy2 - yy1 + 1)
-
-    inter = w * h
-    iou = inter / (box_area + area - inter)
-    return iou
-
-def read_annotations(path, size = -1):
-    logging.info('Loading {}.'.format(path))
-
-    # open file and read each line
-    f = open(path, 'r')
-    lines = f.readlines()
-    # create empty array for training data
-    training_data = []
-    # iterate over lines
-    i = 0
-    # create progress bar
-    pbar = tqdm.tqdm(total=len(lines))
-    while i < len(lines):
-        # return if enough samples have been found
-        if size > 0 and len(training_data) >= size:
-            return training_data
-        # initialize new picture
-        picture = {}
-        # picture must start with file path
-        assert lines[i].endswith(".jpg\n"), "read fault " + lines[i]
-        picture['path'] = lines[i][:-1] # remove \n character
-        # next line contains number of faces
-        i += 1
-        pbar.update(1)
-        if int(lines[i]) == 0:
-            i += 2
-            pbar.update(2)
-            continue
-        number_of_faces = max(1, int(lines[i]))
-        i += 1
-        pbar.update(1)
-        faces = []
-        for j in range(i, i + number_of_faces):
-            face = {}
-            features = lines[j]
-            features = features.split(' ')
-            bbx = features[:4]
-            # convert to integers
-            bbx = [int(i) for i in bbx]
-            if bbx[2] <= 0 or bbx[3] <= 0: # skip bb with non-positive height or width
-                continue
-            face['bb'] = [bbx[0], bbx[1], bbx[0] + bbx[2], bbx[1] + bbx[3]]
-            face['blur'] = int(features[4])
-            face['expression'] = int(features[5])
-            face['illumination'] = int(features[6])
-            face['occlusion'] = int(features[7])
-            face['pose'] = int(features[8])
-            face['invalid'] = int(features[9])
-            faces.append(face)
-
-        # increase the counter
-        i += number_of_faces
-        pbar.update(number_of_faces)
-        # add picture to training set
-        picture['faces'] = faces
-        training_data.append(picture)
-
-    pbar.close()
-    return training_data
 
 def generate_data(pixels, annotations, data_path, im_dir, path_id):
     '''
     pixels = 12
     annotations = train_annotations
-    im_dir = '.data/widerace/train/images/'
+    im_dir = './data/widerace/train/images/'
     '''
+    assert pixels in [12, 24, 48]
 
     directory = os.path.join(data_path, path_id + str(pixels))
     positives = os.path.join(directory, 'pos')
