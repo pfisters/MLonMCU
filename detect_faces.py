@@ -299,13 +299,52 @@ class MTCNN(object):
         min_layer = np.amin([height, width]) * m
 
         scales = self.__compute_scale_pyramid(m, min_layer)
-        stages = [self.__stage1, self.__stage2]
         
-        result = [scales, stage_status]
-        for stage in stages:
-            result = stage(img, result[0], result[1])
+        total_boxes, stage_status = self.__stage1(img, scales, stage_status)
         
-        return result
+        num_boxes = total_boxes.shape[0]
+        if num_boxes == 0:
+            return total_boxes
+
+        # second stage
+        tempimg = np.zeros(shape=(24, 24, 3, num_boxes))
+
+        for k in range(0, num_boxes):
+            tmp = np.zeros((int(stage_status.tmph[k]), int(stage_status.tmpw[k]), 3))
+
+            tmp[stage_status.dy[k] - 1:stage_status.edy[k], stage_status.dx[k] - 1:stage_status.edx[k], :] = \
+                img[stage_status.y[k] - 1:stage_status.ey[k], stage_status.x[k] - 1:stage_status.ex[k], :]
+
+            if tmp.shape[0] > 0 and tmp.shape[1] > 0 or tmp.shape[0] == 0 and tmp.shape[1] == 0:
+                tempimg[:, :, :, k] = cv2.resize(tmp, (24, 24), interpolation=cv2.INTER_AREA)
+
+            else:
+                return np.empty(shape=(0,))
+            
+        tempimg /= 255
+        tempimg = np.transpose(tempimg, (3, 0, 1, 2))
+        
+        out = self._rnet.predict(tempimg)
+
+        out0 = np.transpose(out[0])
+        out1 = np.transpose(out[1])
+
+        score = out1[1, :]
+
+        ipass = np.where(score > self._steps_threshold[1])
+
+        total_boxes = np.hstack([total_boxes[ipass[0], 0:4].copy(), np.expand_dims(score[ipass].copy(), 1)])
+
+        mv = out0[:, ipass[0]]
+
+        if total_boxes.shape[0] > 0:
+            pick = self.__nms(total_boxes, 0.7, 'Union')
+            total_boxes = total_boxes[pick, :]
+            total_boxes = self.__bbreg(total_boxes.copy(), np.transpose(mv[:, pick]))
+
+        logging.info('RNet: %s boxes detected' % len(total_boxes))
+
+        return total_boxes
 
 
     def detect_faces(self, img) -> list:
