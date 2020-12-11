@@ -94,7 +94,7 @@ def main(args):
         optimizer = tf.keras.optimizers.Adam(
             # learning_rate=FLAGS.learning_rate
             ),
-        metrics=['accuracy']
+        metrics=['accuracy', 'mse']
     )
 
     # train

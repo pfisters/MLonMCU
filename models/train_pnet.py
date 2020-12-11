@@ -7,7 +7,7 @@ import math
 
 from absl import app, flags, logging
 from absl.flags import FLAGS, argparse_flags
-from models.MTCNN_models import PNet
+from models.MTCNN_models import PNet, PNet1
 from tools.data_handling import get_image_paths, sample_data, load_data
 import tensorflow as tf
 import os
@@ -82,7 +82,7 @@ def main(args):
     '''
 
     # load model
-    model = PNet()
+    model = PNet1()
 
     # define losses
     losses = {
@@ -99,7 +99,7 @@ def main(args):
         loss = losses,
         loss_weights=loss_weights,
         optimizer = tf.keras.optimizers.Adam(learning_rate=FLAGS.learning_rate),
-        metrics=['accuracy']
+        metrics=['accuracy', 'mse']
     )
 
     # train
@@ -124,6 +124,8 @@ def main(args):
             },
         batch_size=FLAGS.batch_size
     )
+    logging.info('Score: ')
+    logging.info(score)
     
     # print summary
     model.summary()
