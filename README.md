@@ -8,7 +8,7 @@ It contains a reduced Keras implementation of [MTCNN](https://arxiv.org/abs/1604
 ## Installation
 
 1. Clone the repo
-2. Setup an environment according to the requirements file
+2. Setup an environment according to the `environment.yml` file
 3. Set the source node as a environment variable
     ```sh
     export PYTHONPATH="path to your directory"
