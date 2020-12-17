@@ -34,7 +34,7 @@ It contains a reduced Keras implementation of [MTCNN](https://arxiv.org/abs/1604
     python models/quantize_pnet.py
     ```
 
-In models, you will find `*.h5`, `*.tflite` and `.h` files, for the keras model, tensorflow lite model and a hex representation of them.
+In models, you will find `*.h5`, `*.tflite` and `.h` files, for the keras model, tensorflow lite model and a hex representation of them. The quantization files also give you the possibility to generate validation data for STM32 X-CUBE-AI expansion (use the keras models `*.h5` and the `*net_bbx.csv`, `*net_cat.csv` and `*net_data.csv` files). 
 
 To increase the performance, you can also forward sample with `data/generate_hard_samples` for the rnet and onet with the arguments 24 and 48 respectively.
 
