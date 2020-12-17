@@ -126,7 +126,9 @@ def main(args):
             },
         batch_size=FLAGS.batch_size
     )
-    
+    logging.info('Score: ')
+    logging.info(score)
+
     # print summary
     model.summary()
 

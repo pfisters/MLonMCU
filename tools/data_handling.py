@@ -67,7 +67,7 @@ def load_data(samples, pixels):
         cat = [int(x) for x in cat]
         cls_.append(cat)
         # get bounding box
-        if cat[1] is not 1:
+        if cat[1] < 0.5:
             bbx = sample.split(' ')[3:]
             bbx = [float(x) for x in bbx]
             bbx_.append((bbx[0], bbx[1], bbx[2], bbx[3]))

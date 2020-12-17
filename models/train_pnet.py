@@ -7,7 +7,7 @@ import math
 
 from absl import app, flags, logging
 from absl.flags import FLAGS, argparse_flags
-from models.MTCNN_models import PNet, PNet1
+from models.MTCNN_models import PNet
 from tools.data_handling import get_image_paths, sample_data, load_data
 import tensorflow as tf
 import os
@@ -31,6 +31,8 @@ flags.DEFINE_list('training_set_split', [1, 0, 1,],
     'split of training set: positives, partials, negatives')
 flags.DEFINE_list('validation_set_split', [1, 0, 1],
     'split of the validation set: positives, partials, negatives')
+flags.DEFINE_bool('save_inputs', False, 
+    'whether the input data is saved or not')
 
 
 def main(args):
@@ -75,14 +77,13 @@ def main(args):
     v_data, v_cat, v_bbx = load_data(v_samples, FLAGS.pixels)
 
     # convert to csv
-    '''
-    np.savetxt('pnet_data.csv', v_data.reshape(FLAGS.validation_size,-1), delimiter = ',')
-    np.savetxt('pnet_cat.csv', v_cat.reshape(FLAGS.validation_size,-1), delimiter=',')
-    np.savetxt('pnet_bbx.csv', v_bbx.reshape(FLAGS.validation_size,-1), delimiter=',')
-    '''
+    if FLAGS.save_inputs:
+        np.savetxt('pnet_data.csv', v_data.reshape(FLAGS.validation_size,-1), delimiter = ',')
+        np.savetxt('pnet_cat.csv', v_cat.reshape(FLAGS.validation_size,-1), delimiter=',')
+        np.savetxt('pnet_bbx.csv', v_bbx.reshape(FLAGS.validation_size,-1), delimiter=',')
 
     # load model
-    model = PNet1()
+    model = PNet()
 
     # define losses
     losses = {
@@ -98,7 +99,9 @@ def main(args):
     model.compile(
         loss = losses,
         loss_weights=loss_weights,
-        optimizer = tf.keras.optimizers.Adam(learning_rate=FLAGS.learning_rate),
+        optimizer = tf.keras.optimizers.Adam(
+            #learning_rate=FLAGS.learning_rate
+        ),
         metrics=['accuracy', 'mse']
     )
 

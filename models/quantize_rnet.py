@@ -28,7 +28,8 @@ flags.DEFINE_string('pnet_weights', './models/rnet.h5',
     'path to the weights of the RNet')
 flags.DEFINE_string('pnet_light', './models/rnet.tflite',
     'path to the tf lite model')
-
+flags.DEFINE_bool('save_inputs', True,
+    'whether to save the quantized inputs or not')
 
 def main(args):
 
@@ -93,8 +94,7 @@ def main(args):
     # save converted model
     model_name = 'rnet'
     open(FLAGS.pnet_light, 'wb').write(tflitemodel)
-    with open(os.path.join('./models', model_name + '.c'), 'w') as file:
-        file.write(hex_to_c_array(tflitemodel, model_name))
+    open(os.path.join('./models', model_name + '.h'), 'w').write(hex_to_c_array(tflitemodel, model_name))
 
     # analyse full size performance
     score = model.evaluate(
@@ -134,6 +134,12 @@ def main(args):
         cat_predictions[i] = cat_output.argmax()
         bbx_predictions[i] = bbx_output
     
+    # generate test data for micro controller
+    if FLAGS.save_inputs:
+        filename = 'rnet_test cat|' + '|'.join(map(str,cat_output.flatten())) + '|bbx|' + '|'.join(map(str, bbx_output.flatten()))
+        text = np.array2string(val_batch, separator=',', threshold=2000).replace('[', '{').replace(']', '}')
+        open(filename + '.txt', 'w').write(text)
+
     # compute bounding box MSE
     bbx_scale, bbx_zero_point = output_details[0]['quantization']
     bbx_predictions_f = (bbx_predictions.astype(float) - bbx_zero_point) * bbx_scale

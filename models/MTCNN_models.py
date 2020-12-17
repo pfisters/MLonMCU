@@ -18,7 +18,7 @@ def PNet():
     L = ReLU(name='PNet_RELU3')(L)
 
     C = Conv2D(2, kernel_size=(1, 1), strides=(1, 1), name = 'PNet_CONV4')(L)
-    classifier = Softmax(axis=1, name = 'FACE_CLASSIFIER')(C)
+    classifier = Softmax(name = 'FACE_CLASSIFIER')(C)
     regressor = Conv2D(4, kernel_size=(1, 1), strides=(1, 1), name = 'BB_REGRESSION')(L)
 
     return Model(X, [regressor, classifier], name = 'PNet')
@@ -43,7 +43,7 @@ def RNet():
     L = ReLU(name = 'RNet_PRELU4')(L)
 
     C = Dense(2, name = 'RNet_DENSE2')(L)
-    classifier = Softmax(axis=1, name = 'FACE_CLASSIFIER')(C)
+    classifier = Softmax(name = 'FACE_CLASSIFIER')(C)
     regressor = Dense(4, name = 'BB_REGRESSION')(L)
 
     return Model(X, [regressor, classifier], name = 'RNet')
@@ -73,7 +73,7 @@ def ONet():
     L = ReLU(name = 'ONet_RELU5')(L)
 
     C = Dense(2, name = 'ONet_DENSE2')(L)
-    classifier = Softmax(axis = 1, name = 'FACE_CLASSIFIER')(C)
+    classifier = Softmax(name = 'FACE_CLASSIFIER')(C)
     regressor = Dense(4, name = 'BB_REGRESSION')(L)
 
     return Model(X, [regressor, classifier], name = 'ONet')
