@@ -20,7 +20,7 @@ flags.DEFINE_integer('batch_size', 64,
     'batch size for training')
 flags.DEFINE_integer('pixels', 12,
     'input size of images', lower_bound=0)
-flags.DEFINE_integer('validation_size', 10000,
+flags.DEFINE_integer('validation_size', 1000,
     'size of the validation set')
 flags.DEFINE_list('validation_set_split', [1, 0, 1],
     'split of the validation set: positives, partials, negatives')
@@ -28,8 +28,10 @@ flags.DEFINE_string('pnet_weights', './models/pnet.h5',
     'path to the weights of the PNet')
 flags.DEFINE_string('pnet_light', './models/pnet.tflite',
     'path to the tf lite model')
-flags.DEFINE_bool('save_inputs', True,
+flags.DEFINE_bool('save_inputs', False,
     'whether to save the quantized inputs or not')
+flags.DEFINE_bool('micro_data', True,
+    'input data for the validation of the model on STM32')
 
 def main(args):
 
@@ -63,13 +65,12 @@ def main(args):
 
     # load data
     v_data, v_cat, v_bbx = load_data(v_samples, FLAGS.pixels)
-
-    # convert to csv
-    '''
-    np.savetxt('pnet_data.csv', v_data.reshape(FLAGS.validation_size,-1), delimiter = ',')
-    np.savetxt('pnet_cat.csv', v_cat.reshape(FLAGS.validation_size,-1), delimiter=',')
-    np.savetxt('pnet_bbx.csv', v_bbx.reshape(FLAGS.validation_size,-1), delimiter=',')
-    '''
+    
+    if FLAGS.micro_data:
+        # convert to csv
+        np.savetxt('pnet_data.csv', v_data.reshape(FLAGS.validation_size,-1), delimiter = ',')
+        np.savetxt('pnet_cat.csv', v_cat.reshape(FLAGS.validation_size,-1), delimiter=',')
+        np.savetxt('pnet_bbx.csv', v_bbx.reshape(FLAGS.validation_size,-1), delimiter=',')
 
     # converter
     converter = tf.lite.TFLiteConverter.from_keras_model(model)

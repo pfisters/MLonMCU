@@ -30,6 +30,8 @@ flags.DEFINE_string('pnet_light', './models/rnet.tflite',
     'path to the tf lite model')
 flags.DEFINE_bool('save_inputs', True,
     'whether to save the quantized inputs or not')
+flags.DEFINE_bool('micro_data', True,
+    'input data for the validation of the model on STM32')
 
 def main(args):
 
@@ -65,11 +67,11 @@ def main(args):
     v_data, v_cat, v_bbx = load_data(v_samples, FLAGS.pixels)
 
     # convert to csv
-    '''
-    np.savetxt('pnet_data.csv', v_data.reshape(FLAGS.validation_size,-1), delimiter = ',')
-    np.savetxt('pnet_cat.csv', v_cat.reshape(FLAGS.validation_size,-1), delimiter=',')
-    np.savetxt('pnet_bbx.csv', v_bbx.reshape(FLAGS.validation_size,-1), delimiter=',')
-    '''
+    if FLAGS.micro_data:
+        np.savetxt('rnet_data.csv', v_data.reshape(FLAGS.validation_size,-1), delimiter = ',')
+        np.savetxt('rnet_cat.csv', v_cat.reshape(FLAGS.validation_size,-1), delimiter=',')
+        np.savetxt('rnet_bbx.csv', v_bbx.reshape(FLAGS.validation_size,-1), delimiter=',')
+        
 
     # converter
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
