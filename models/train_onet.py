@@ -17,7 +17,7 @@ import tqdm
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('epochs', 20,
     'number of training epochs', lower_bound=0)
-flags.DEFINE_integer('batch_size', 16,
+flags.DEFINE_integer('batch_size', 128,
     'batch size for training')
 flags.DEFINE_float('learning_rate', 1e-3,
     'initial learning rate')
